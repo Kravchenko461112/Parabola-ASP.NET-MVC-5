@@ -1,0 +1,238 @@
+﻿@model WebApplication1.Models.FunctionData
+
+@{
+    ViewBag.Title = "Home Page";
+}
+
+<head>
+
+
+    <style>
+        .layer1 {
+            padding: 25px; /* Поля вокруг текста */
+            float: left; /* Обтекание по правому краю */
+        }
+
+
+        .filterInput {
+            margin: 0;
+            padding: 0;
+            width: 52%
+        }
+
+        .filterTable {
+            border: 4px double #333; /* Рамка вокруг таблицы */
+            /*border-collapse: separate;*/ /* Способ отображения границы */
+            width: 40%; /* Ширина таблицы */
+            /*border-spacing: 7px 11px;*/ /* Расстояние между ячейками */
+            font: 13pt tahoma;
+            text-align: center;
+        }
+
+        .buttonPlot {
+            border: 4px
+        }
+    </style>
+
+</head>
+
+@*<body>*@
+
+<div>
+    @{var options = new AjaxOptions()
+        {
+            UpdateTargetId = "myChart",
+            ////Url = Url.Action("Partial"),
+            //LoadingElementId = "loading",
+            //LoadingElementDuration = 1800,
+            Url = Url.Action("JsonOrdersData"),
+            OnSuccess = "DrawChart",
+
+        };
+    }
+
+    @using (Ajax.BeginForm(options))
+    {
+        <table border="1" ; border: 2px; style='position: absolute; top: 25%;right: 10%;' class="filterTable">
+            <caption>Таблица для ввода данных и коэффициентов</caption>
+
+
+            @*Использование внешнего вспомогательного метода Html-helper для создания элемента управления*@
+            <tr height="60">
+                <td width="140">Function:</td>
+                <td width="80">Y =</td>
+                <td width="50"> @Html.TextBoxFor(m => m.A, new { style = "width:45px" })@*("A", null,new { style = "width:45px" })*@@*<input type="text" name="A" value="2" class="filterInput">*@ </td>
+                @Html.ValidationMessageFor(m => m.A)
+                <td width="120">X^2 +</td>
+                <td width="40">@Html.TextBoxFor(m => m.B, new { style = "width:45px" })@*("B", null,new { style = "width:45px" })*@@*<input type="text" name="B" value="2" class="filterInput">*@</td>
+                @Html.ValidationMessageFor(m => m.B)
+                <td width="80">X +</td>
+                <td width="60">@Html.TextBoxFor(m => m.C, new { style = "width:45px" })@*("C", null,new { style = "width:45px" })*@@*<input type="text" name="C" value="2" class="filterInput">*@</td>
+            </tr>
+
+            <tr height="20">
+                <td width="140"></td>
+                <td width="80"></td>
+                <td width="50"></td>
+                <td width="120"></td>
+                <td width="40"></td>
+                <td width="60"></td>
+                <td width="60"></td>
+            </tr>
+            @*Использование input для создания элемента управления*@
+            <tr height="60">
+                <td width="140">Step:</td>
+                <td width="80">@Html.TextBoxFor(m => m.Step, new { style = "width:45px", dat_val_number = "true" })@*("Step", null,new { style = "width:45px" })*@@*<input type="text" name="Step" value="1" class="filterInput">*@</td>
+                <td width="50"></td>
+                <td width="120"></td>
+                <td width="40"></td>
+                <td width="60"></td>
+                <td width="60"></td>
+            </tr>
+
+            <tr height="20">
+                <td width="140"></td>
+                <td width="80"></td>
+                <td width="50"></td>
+                <td width="120"></td>
+                <td width="40"></td>
+                <td width="60"></td>
+                <td width="60"></td>
+            </tr>
+
+            <tr height="60">
+                <td width="140">From:</td>
+                <td width="80">@Html.TextBoxFor(m => m.Range1, new { style = "width:45px" })@*("Range 1", null,new { style = "width:45px" })*@@*<input type="text" name="Range1" value="-5" class="filterInput">*@</td>
+                <td width="50">to</td>
+                <td width="120">@Html.TextBoxFor(m => m.Range2, new { style = "width:45px" })@*("Range 2", null,new { style = "width:45px" })*@@*<input type="text" name="Range2" value="5" class="filterInput">*@</td>
+                <td width="40"></td>
+                <td width="60"></td>
+                <td width="60"></td>
+            </tr>
+
+        </table>
+        @*@Html.ValidationSummary();*@
+
+        <input type="submit" name="botton" value="Plot" style='position: absolute;
+           top: 80%; right: 20%;' class="filterTable" />
+
+    }
+
+</div>
+
+@*<div id="loading" style="display:none; color:red; font-weight:bold;">
+
+        <p>Идёт загрузка...</p>
+
+    </div>*@
+<div id="results" class="layer1">
+
+
+    <h2 style="font:italic" ;>Построение графика функции</h2>
+
+
+    <canvas id="myChart" width="400" height="420"></canvas>  @*создать Canvas myChart*@
+
+
+
+
+
+</div>
+
+
+@section scripts
+
+    {
+    <script src='@Url.Content( "~/Scripts/jquery.unobtrusive-ajax.js")'></script>
+    <script>
+        // переопределение валидации на стороне клиента
+        $.validator.methods.range = function (value, element, param) {
+            var globalizedValue = value.replace(",", ".");
+            return this.optional(element) || (globalizedValue >= param[0] && globalizedValue <= param[1]);
+        }
+
+        $.validator.methods.number = function (value, element) {
+            return this.optional(element) || /^-?(?:\d+|\d{1,3}(?:[\s\.,]\d{3})+)(?:[\.,]\d+)?$/.test(value);
+        }
+    </script>
+
+
+    <script type="text/javascript">
+
+
+        function DrawChart(data) {
+
+            //var inletJsonmassive = data;
+            //if (inletJsonmassive.length < 1) {
+            //    return;
+            //                               }
+            var ctx = $("#myChart")[0].getContext('2d');
+
+            ctx.clearRect(0, 0, $("#chartCanvas").width(), $("#chartCanvas").height());
+
+            var dataset = [];                             /*массив в требуемом для отображения формате*/
+
+            for (var i = 0; i < data.length; i++) {      /*преобразование десериализ-го массива Json */                                                          /* в требуемый для отображения  формат */
+
+                dataset.push({ x: data[i].X, y: data[i].Y });
+
+                var chartColors = { green: "rgb(75, 192, 192)", black: "rgb(0, 0, 0)" }
+            }                                                                          /*цвет общий*/
+
+
+            var chart = new Chart(ctx, {
+
+                type: 'scatter',                                             // Тип графика - линейный
+
+                data: {
+                    datasets: [{
+                        borderColor: chartColors.green,
+                        data: dataset,
+                        pointBackgroundColor: chartColors.green,
+                        pointBorderColor: chartColors.green,
+                        showLine: true,
+                        fill: false
+
+                    }]
+                },              /*data закрылась*/
+
+                options: {
+
+                    responsive: false,
+                    maintainAspectRatio: false,
+                    legend: {
+                        display: false
+                    },
+                    scales: {
+                        xAxes: [{
+                            ticks: {
+                                fontColor: chartColors.black
+                            },
+                            gridLines: {
+                                zeroLineColor: chartColors.black,
+                                zeroLineWidth: 0.5
+                            }
+                        }],
+
+                        yAxes: [{
+                            ticks: {
+                                fontColor: chartColors.black,
+                            },
+                            gridLines: {
+                                zeroLineColor: chartColors.black,
+                                zeroLineWidth: 0.5
+
+                            }
+                        }]
+                    }      /*scales эакрылся*/
+                }            /*options*/
+            }
+            );
+            /* закр varChart*/
+        }
+
+
+
+
+    </script>
+}
